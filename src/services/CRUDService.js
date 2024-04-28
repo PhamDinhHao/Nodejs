@@ -95,12 +95,31 @@ let deleteUserById = (userId) => {
     return new Promise(async (resolve, reject) => {
         try {
             let user = await db.User.findOne({
-                where: { id: userId }
+                where: { id: userId },
+                raw: false
+
             })
-            if (user) {
-                await user.destroy();
+            if (!user) {
+                resolve({
+                    errCode: 2,
+                    errMessage: `The User isn't exist`
+                });
+
             }
-            resolve();
+            else {
+                await user.destroy();
+
+                // await db.User.destroy({
+                //     where: { id: userId },
+                // })
+
+
+                resolve({
+                    errCode: 0,
+                    errMessage: `The User is delete`
+                });
+            }
+
         } catch (error) {
             reject(error);
         }
