@@ -167,17 +167,17 @@ let bulkCreateSchedule = (data) => {
                 })
 
                 //convert date
-                if (existing && existing.length > 0) {
-                    existing = existing.map(item => {
-                        item.date = new Date(item.date).getTime();
-                        return item
-                    })
-                }
+                // if (existing && existing.length > 0) {
+                //     existing = existing.map(item => {
+                //         item.date = new Date(item.date).getTime();
+                //         return item
+                //     })
+                // }
 
 
                 //compare differrent
                 let toCreate = _.differenceWith(schedule, existing, (a, b) => {
-                    return a.timeType === b.timeType && a.date === b.date;
+                    return a.timeType === b.timeType && +a.date === +b.date;
                 });
 
                 //create data
@@ -196,10 +196,50 @@ let bulkCreateSchedule = (data) => {
         }
     })
 }
+let getScheduleByDate = (doctorId, date) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            if (!doctorId || !date) {
+                resolve({
+                    errCode: 1,
+                    message: 'Missing required parameter'
+                })
+            }
+            else {
+                let dataSchedule = await db.Schedule.findAll({
+                    where: {
+                        doctorId: doctorId,
+                        date: date
+                    },
+                    include: [
+
+                        { model: db.Allcode, as: 'timeTypeData', attributes: ['valueEn', 'valueVi'] }
+
+                    ],
+                    raw: false,
+                    nest: true
+
+                })
+                if (!dataSchedule) dataSchedule = []
+                resolve({
+                    errCode: 0,
+                    data: dataSchedule
+                })
+            }
+
+
+
+
+        } catch (error) {
+            reject(error)
+        }
+    })
+}
 module.exports = {
     getTopDoctorHome: getTopDoctorHome,
     getAllDoctors: getAllDoctors,
     saveDetailInforDoctor: saveDetailInforDoctor,
     getDetailDoctorById: getDetailDoctorById,
-    bulkCreateSchedule: bulkCreateSchedule
+    bulkCreateSchedule: bulkCreateSchedule,
+    getScheduleByDate: getScheduleByDate
 }
