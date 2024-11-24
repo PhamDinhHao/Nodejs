@@ -2,7 +2,7 @@ import { DATE, Model, where } from "sequelize";
 import db from "../models/index";
 import { raw } from "body-parser";
 import { escape } from "mysql2";
-import _ from 'lodash';
+import _, { intersection } from 'lodash';
 require('dotenv').config();
 const MAX_NUMBER_SCHEDULE = process.env.MAX_NUMBER_SCHEDULE;
 let getTopDoctorHome = (limitInput) => {
@@ -56,7 +56,7 @@ let getAllDoctors = () => {
 let saveDetailInforDoctor = (inputData) => {
     return new Promise(async (resolve, reject) => {
         try {
-            if (!inputData.doctorId || !inputData.contentHTML || !inputData.contentMarkdown || !inputData.action) {
+            if (!inputData.doctorId || !inputData.contentHTML || !inputData.contentMarkdown || !inputData.action || !inputData.selectedPrice || !inputData.selectedPayment || !inputData.selectProvince || !inputData.nameClinic || !inputData.addressClinic || !inputData.note) {
                 resolve({
                     errCode: 1,
                     message: 'Misssing parameter'
@@ -82,6 +82,34 @@ let saveDetailInforDoctor = (inputData) => {
 
                         await doctorMarkdown.save();
                     }
+                }
+                let doctorInfor = await db.Doctor_Infor.findOne({
+                    where: {
+                        doctorId: inputData.doctorId,
+                    },
+                    raw: false
+                })
+
+                if (doctorInfor) {
+                    doctorInfor.doctorId = inputData.doctorId
+                    doctorInfor.priceId = inputData.selectedPrice
+                    doctorInfor.provinceId = inputData.selectProvince
+                    doctorInfor.paymentId = inputData.selectedPayment
+                    doctorInfor.nameClinic = inputData.nameClinic
+                    doctorInfor.addressClinic = inputData.addressClinic
+                    doctorInfor.note = inputData.note
+                    await doctorInfor.save()
+
+                } else {
+                    await db.Doctor_Infor.create({
+                        doctorId: inputData.doctorId,
+                        priceId: inputData.selectedPrice,
+                        provinceId: inputData.selectProvince,
+                        paymentId: inputData.selectedPayment,
+                        nameClinic: inputData.nameClinic,
+                        addressClinic: inputData.addressClinic,
+                        note: inputData.note
+                    })
                 }
                 resolve({
                     errCode: 0,
@@ -118,7 +146,18 @@ let getDetailDoctorById = (inputid) => {
                             attributes: ['description', 'contentHTML', 'contentMarkdown'],
 
                         },
-                        { model: db.Allcode, as: 'positionData', attributes: ['valueEn', 'valueVi'] }
+                        { model: db.Allcode, as: 'positionData', attributes: ['valueEn', 'valueVi'] },
+                        {
+                            model: db.Doctor_Infor,
+                            arrtributes: {
+                                exclude: ['id', 'doctorId']
+                            },
+                            include: [
+                                { model: db.Allcode, as: 'priceTypeData', arrtributes: ['valueEn', 'valueVi'] },
+                                { model: db.Allcode, as: 'provinceTypeData', arrtributes: ['valueEn', 'valueVi'] },
+                                { model: db.Allcode, as: 'paymentTypeData', arrtributes: ['valueEn', 'valueVi'] }
+                            ]
+                        }
 
                     ],
                     raw: false,
@@ -196,6 +235,39 @@ let bulkCreateSchedule = (data) => {
         }
     })
 }
+let getExtraInforDoctorById = (doctorId) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            if (!doctorId) {
+                resolve({
+                    errCode: 1,
+                    message: 'Missing required parameter'
+                })
+            }
+            else {
+                let data = await db.Doctor_Infor.findOne({
+                    where: { doctorId: doctorId },
+                    attributes: {
+                        exclude: ['doctorId', 'id']
+                    },
+                    include: [
+                        { model: db.Allcode, as: 'priceTypeData', attributes: ['valueEn', 'valueVi'] },
+                        { model: db.Allcode, as: 'provinceTypeData', attributes: ['valueEn', 'valueVi'] },
+                        { model: db.Allcode, as: 'paymentTypeData', attributes: ['valueEn', 'valueVi'] }
+                    ],
+                    raw: true
+                })
+                if (!data) data = {}
+                resolve({
+                    errCode: 0,
+                    data: data
+                })
+            }
+        } catch (error) {
+            reject(error)
+        }
+    })
+}
 let getScheduleByDate = (doctorId, date) => {
     return new Promise(async (resolve, reject) => {
         try {
@@ -234,6 +306,44 @@ let getScheduleByDate = (doctorId, date) => {
             reject(error)
         }
     })
+}
+let getProfileDoctorById = (doctorId) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            if (!doctorId) {
+                resolve({
+                    errCode: 1,
+                    message: 'Missing required parameter'
+                })
+            }
+            else {
+                let data = await db.User.findOne({
+                    where: { id: doctorId },
+                    attributes: {
+                        exclude: ['password']
+                    },
+                    include: [
+                        { model: db.Markdown, as: 'markdownData', attributes: ['description', 'contentHTML', 'contentMarkdown'] },
+                        { model: db.Allcode, as: 'positionData', attributes: ['valueEn', 'valueVi'] },
+                        { model: db.Doctor_Infor, as: 'doctorInforData', attributes: ['id', 'doctorId'], include: [
+                            { model: db.Allcode, as: 'priceTypeData', attributes: ['valueEn', 'valueVi'] },
+                            { model: db.Allcode, as: 'provinceTypeData', attributes: ['valueEn', 'valueVi'] },
+                            { model: db.Allcode, as: 'paymentTypeData', attributes: ['valueEn', 'valueVi'] }
+                        ] }
+                    ],
+                    raw: false,
+                    nest: true
+                })
+                if (!data) data = {}
+                resolve({
+                    errCode: 0,
+                    data: data
+                })
+            }
+        } catch (error) {
+            reject(error)
+        }
+    })  
 }
 module.exports = {
     getTopDoctorHome: getTopDoctorHome,
