@@ -56,10 +56,11 @@ let getAllDoctors = () => {
 let saveDetailInforDoctor = (inputData) => {
     return new Promise(async (resolve, reject) => {
         try {
-            if (!inputData.doctorId || !inputData.contentHTML || !inputData.contentMarkdown || !inputData.action || !inputData.selectedPrice || !inputData.selectedPayment || !inputData.selectProvince || !inputData.nameClinic || !inputData.addressClinic || !inputData.note) {
+            let check = checkRequiredFields(inputData);
+            if (!check.isValid) {
                 resolve({
                     errCode: 1,
-                    message: 'Misssing parameter'
+                    message: `Missing parameter: ${check.element}`
                 })
             }
             else {
@@ -98,6 +99,8 @@ let saveDetailInforDoctor = (inputData) => {
                     doctorInfor.nameClinic = inputData.nameClinic
                     doctorInfor.addressClinic = inputData.addressClinic
                     doctorInfor.note = inputData.note
+                    doctorInfor.specialtyId = inputData.specialtyId
+                    doctorInfor.clinicId = inputData.clinicId
                     await doctorInfor.save()
 
                 } else {
@@ -108,7 +111,9 @@ let saveDetailInforDoctor = (inputData) => {
                         paymentId: inputData.selectedPayment,
                         nameClinic: inputData.nameClinic,
                         addressClinic: inputData.addressClinic,
-                        note: inputData.note
+                        note: inputData.note,
+                        specialtyId: inputData.specialtyId,
+                        clinicId: inputData.clinicId
                     })
                 }
                 resolve({
@@ -345,6 +350,22 @@ let getProfileDoctorById = (doctorId) => {
             reject(error)
         }
     })  
+}
+let checkRequiredFields = (inputData) => {
+    let arr = ['doctorId', 'contentHTML', 'contentMarkdown', 'action', 'selectedPrice', 'selectedPayment', 'selectProvince', 'nameClinic', 'addressClinic', 'note', 'specialtyId', 'clinicId'];
+    let isValid =true
+    let element = ''
+    for (let i = 0; i < arr.length; i++) {
+        if (!inputData[arr[i]]) {
+            isValid = false;
+            element = arr[i];
+            break;
+        }
+    }
+    return {
+        isValid: isValid,
+        element: element
+    }
 }
 module.exports = {
     getTopDoctorHome: getTopDoctorHome,
