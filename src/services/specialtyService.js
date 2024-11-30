@@ -53,8 +53,54 @@ let getAllSpecialty = () => {
         }
     })
 }
-
+let getDetailSpecialtyById = (specialtyId, location) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            if (!specialtyId || !location) {
+                resolve({
+                    errCode: 1,
+                    message: "Missing required parameters!"
+                });
+            }
+            else {
+                let specialty = await db.Specialty.findOne({
+                    where: { id: specialtyId },
+                    attributes: ['descriptionHTML', 'descriptionMarkdown'],
+                })
+                if (specialty) {
+                    let doctorSpecialty = []
+                    if (location === "ALL") {
+                        doctorSpecialty = await db.Doctor_Infor.findAll({
+                            where: { specialtyId: specialtyId },
+                            attributes: ['doctorId', 'provinceId']
+                        })
+                    } else {
+                        doctorSpecialty = await db.Doctor_Infor.findAll({
+                            where: { specialtyId: specialtyId, provinceId: location },
+                            attributes: ['doctorId', 'provinceId']
+                        })
+                    }
+                    specialty.doctorSpecialty = doctorSpecialty
+                    resolve({
+                        errCode: 0,
+                        message: "Get detail specialty successfully!",
+                        specialty: specialty
+                    });
+                }
+                else {
+                    resolve({
+                        errCode: 2,
+                        message: "Specialty not found!"
+                    });
+                }
+            }
+        } catch (e) {
+            reject(e);
+        }
+    })
+}
 module.exports = {
     createSpecialty: createSpecialty,
-    getAllSpecialty: getAllSpecialty
+    getAllSpecialty: getAllSpecialty,
+    getDetailSpecialtyById: getDetailSpecialtyById
 }
