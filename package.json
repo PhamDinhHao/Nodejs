@@ -1,7 +1,7 @@
 {
   "name": "nodejs",
   "version": "1.0.0",
-  "description": "backend nodejs hoiDanIT",
+  "description": "backend nodejs DOANCHUYENNGANH",
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -11,7 +11,7 @@
     "fullstack",
     "nodejs",
     "express",
-    "hoiDanIT"
+    "DOANCHUYENNGANH"
   ],
   "author": "DinhHao",
   "license": "ISC",

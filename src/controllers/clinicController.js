@@ -11,7 +11,16 @@ let createClinic = async (req, res) => {
         });
     }
 }
+let getAllClinic = async (req, res) => {
+    try {
+        let infor = await clinicService.getAllClinic();
+        return res.status(200).json(infor);
+    } catch (e) {
+        console.log(e);
+    }
+}
 
 module.exports = {
-    createClinic: createClinic
+    createClinic: createClinic,
+    getAllClinic: getAllClinic
 }
