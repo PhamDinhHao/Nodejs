@@ -379,14 +379,26 @@ let getListPatientForDoctor = (doctorId, date) => {
             }
             else {
                 let data = await db.Booking.findAll({
-                    where: {statusId: 'S2', doctorId: doctorId, date: date},
-                    include: [{
-                        model: db.User, as: 'patientData', attributes: ['firstName', 'email', 'address', 'gender'],
-                        include: {
-                            model: db.Allcode, as: 'genderData', attributes: ['valueEn', 'valueVi']
+                    where: {statusId: 'S1', doctorId: doctorId, date: date},
+                    include: [
+                        {
+                            model: db.User, 
+                            as: 'patientData', 
+                            attributes: ['firstName', 'email', 'address', 'gender'],
+                            include: [
+                                {
+                                    model: db.Allcode, 
+                                    as: 'genderData', 
+                                    attributes: ['valueEn', 'valueVi']
+                                }
+                            ]
                         },
-                        model: db.Allcode, as: 'timeTypeDataPatient', attributes: ['valueEn', 'valueVi']
-                    }],
+                        {
+                            model: db.Allcode, 
+                            as: 'timeTypeDataPatient', 
+                            attributes: ['valueEn', 'valueVi']
+                        }
+                    ],
                     raw: false,
                     nest: true
                 })

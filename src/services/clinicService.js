@@ -39,10 +39,23 @@ let getAllClinic = () => {
         }
     })
 }
-
+let getDetailClinicById = (clinicId) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let clinic = await db.Clinic.findOne({
+                where: { id: clinicId },
+                raw: true
+            })
+            resolve(clinic);
+        } catch (e) {
+            reject(e);
+        }
+    })
+}
 module.exports = {
     createClinic: createClinic,
-    getAllClinic: getAllClinic
+    getAllClinic: getAllClinic,
+    getDetailClinicById: getDetailClinicById
 }
 
 
