@@ -75,8 +75,12 @@ let getDetailSpecialtyById = (specialtyId, location) => {
                             attributes: ['doctorId', 'provinceId']
                         })
                     } else {
+                        let province = await db.Allcode.findOne({
+                            where: { keyMap: location },
+                            attributes: ['id']
+                        })
                         doctorSpecialty = await db.Doctor_Infor.findAll({
-                            where: { specialtyId: specialtyId, provinceId: location },
+                            where: { specialtyId: specialtyId, provinceId: province.id },
                             attributes: ['doctorId', 'provinceId']
                         })
                     }

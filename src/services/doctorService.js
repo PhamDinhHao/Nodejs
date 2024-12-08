@@ -108,7 +108,7 @@ let saveDetailInforDoctor = (inputData) => {
                     await db.Doctor_Infor.create({
                         doctorId: inputData.doctorId,
                         priceId: inputData.selectedPrice,
-                        provinceId: inputData.selectProvince,
+                        provinceId: inputData.selectedProvince,
                         paymentId: inputData.selectedPayment,
                         nameClinic: inputData.nameClinic,
                         addressClinic: inputData.addressClinic,
@@ -353,7 +353,7 @@ let getProfileDoctorById = (doctorId) => {
     })  
 }
 let checkRequiredFields = (inputData) => {
-    let arr = ['doctorId', 'contentHTML', 'contentMarkdown', 'action', 'selectedPrice', 'selectedPayment', 'selectProvince', 'nameClinic', 'addressClinic', 'note', 'specialtyId', 'clinicId'];
+    let arr = ['doctorId', 'contentHTML', 'contentMarkdown', 'action', 'selectedPrice', 'selectedPayment', 'selectedProvince', 'nameClinic', 'addressClinic', 'note', 'specialtyId', 'clinicId'];
     let isValid =true
     let element = ''
     for (let i = 0; i < arr.length; i++) {
