@@ -155,13 +155,15 @@ let getDetailDoctorById = (inputid) => {
                         { model: db.Allcode, as: 'positionData', attributes: ['valueEn', 'valueVi'] },
                         {
                             model: db.Doctor_Infor,
-                            arrtributes: {
-                                exclude: ['id', 'doctorId']
+                            attributes: {
+                                exclude: ['id', 'doctorId', 'specialtyId', 'clinicId']
                             },
                             include: [
                                 { model: db.Allcode, as: 'priceTypeData', arrtributes: ['valueEn', 'valueVi'] },
                                 { model: db.Allcode, as: 'provinceTypeData', arrtributes: ['valueEn', 'valueVi'] },
-                                { model: db.Allcode, as: 'paymentTypeData', arrtributes: ['valueEn', 'valueVi'] }
+                                { model: db.Allcode, as: 'paymentTypeData', arrtributes: ['valueEn', 'valueVi'] },
+                                { model: db.Allcode, as: 'specialtyData', arrtributes: ['valueEn', 'valueVi'] },
+                                { model: db.Allcode, as: 'clinicData', arrtributes: ['valueEn', 'valueVi'] }
                             ]
                         }
 
@@ -254,14 +256,37 @@ let getExtraInforDoctorById = (doctorId) => {
                 let data = await db.Doctor_Infor.findOne({
                     where: { doctorId: doctorId },
                     attributes: {
-                        exclude: ['doctorId', 'id']
+                        exclude: ['doctorId', 'id', 'specialtyId', 'clinicId']
                     },
                     include: [
-                        { model: db.Allcode, as: 'priceTypeData', attributes: ['valueEn', 'valueVi'] },
-                        { model: db.Allcode, as: 'provinceTypeData', attributes: ['valueEn', 'valueVi'] },
-                        { model: db.Allcode, as: 'paymentTypeData', attributes: ['valueEn', 'valueVi'] }
+                        { 
+                            model: db.Allcode, 
+                            as: 'priceTypeData',
+                            attributes: ['valueEn', 'valueVi'] 
+                        },
+                        { 
+                            model: db.Allcode, 
+                            as: 'provinceTypeData',
+                            attributes: ['valueEn', 'valueVi'] 
+                        },
+                        { 
+                            model: db.Allcode, 
+                            as: 'paymentTypeData',
+                            attributes: ['valueEn', 'valueVi'] 
+                        },
+                        { 
+                            model: db.Allcode, 
+                            as: 'specialtyData',
+                            attributes: ['valueEn', 'valueVi'] 
+                        },
+                        { 
+                            model: db.Allcode, 
+                            as: 'clinicData',
+                            attributes: ['valueEn', 'valueVi'] 
+                        }
                     ],
-                    raw: true
+                    raw: false,
+                    nest: true
                 })
                 if (!data) data = {}
                 resolve({
@@ -415,7 +440,7 @@ let getListPatientForDoctor = (doctorId, date) => {
 let sendRemedy = (data) => {
     return new Promise(async (resolve, reject) => {
         try {
-            if (!data.email || !data.doctorId || !data.patientId || !data.timeType ||!data.imageBase64) {
+            if (!data.email || !data.doctorId || !data.patientId || !data.timeType ||!data.imgBase64) {
                 resolve({
                     errCode: 1,
                     message: 'Missing required parameter'
@@ -423,14 +448,14 @@ let sendRemedy = (data) => {
             }
             else {
                 let appointment = await db.Booking.findOne({
-                    where: {doctorId: data.doctorId, patientId: data.patientId, timeType: data.timeType, statusId: 'S2'},
+                    where: {doctorId: data.doctorId, patientId: data.patientId, timeType: data.timeType, statusId: 'S1'},
                     raw: false
                 })
                 if (appointment) {
                     appointment.statusId = 'S3'
                     await appointment.save()
                 }
-                await emailService.sendAttachment(data)
+                await emailService.sendAttachment(data) 
                 resolve({
                     errCode: 0,
                     message: 'Send remedy succeed'

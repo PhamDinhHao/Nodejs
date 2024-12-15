@@ -2,6 +2,7 @@ require('dotenv').config()
 import nodemailer from 'nodemailer'
 
 let sendSimpleEmail = async (dataSend) => {
+
     let transporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST,
         port: 587,
@@ -27,6 +28,11 @@ let sendSimpleEmail = async (dataSend) => {
 let sendAttachment = async (dataSend) => {
     return new Promise(async (resolve, reject) => {
         try {
+            if (!dataSend.email || !dataSend.imgBase64) {
+                reject(new Error('Missing required fields'));
+                return;
+            }
+
             let transporter = nodemailer.createTransport({
                 host: process.env.SMTP_HOST,
                 port: 587,
@@ -35,7 +41,8 @@ let sendAttachment = async (dataSend) => {
                     user: process.env.EMAIL,
                     pass: process.env.PASS,
                 },
-            })
+            });
+
             let info = await transporter.sendMail({
                 from: process.env.EMAIL,
                 to: dataSend.email,
@@ -43,16 +50,18 @@ let sendAttachment = async (dataSend) => {
                 html: getBodyHTMLEmailRemedy(dataSend),
                 attachments: [
                     {
-                        filename: `remedy-${dataSend.patientId}-${new Date().getTime().png}`,
-                        content: dataSend.imageBase64.split('base64,')[1],
+                        filename: `remedy-${dataSend.patientId}-${new Date().getTime()}.png`,
+                        content: dataSend.imgBase64.split('base64,')[1],
                         encoding: 'base64'
                     }
                 ]
-            })
+            });
+            
+            resolve(info);
         } catch (error) {
-            reject(error)
+            reject(error);
         }
-    })
+    });
 }
 let getBodyHTMLEmailRemedy = (dataSend) => {
     return `<h3>Xin chào ${dataSend.filename}</h3>
