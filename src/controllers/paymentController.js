@@ -1,17 +1,8 @@
-// config/vnpay.js
-require('dotenv').config();
-
-export const vnpayConfig = {
-    vnp_TmnCode: process.env.VNP_TMN_CODE || 'CD3C9M4R',
-    vnp_HashSecret: process.env.VNP_HASH_SECRET || 'IARSCI2PH2UMQ0FG4H9DE9CZIXC05H3Z',
-    vnp_Url: 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html',
-    vnp_ReturnUrl: process.env.VNP_RETURN_URL || 'http://localhost:3000/payment-result',
-    vnp_Api: 'https://sandbox.vnpayment.vn/merchant_webapi/api/transaction'
-};
-// controllers/paymentController.js
-import crypto from 'crypto';
-import querystring from 'querystring';
-import moment from 'moment';
+const crypto = require('crypto');
+const querystring = require('querystring');
+const moment = require('moment');
+const vnpayConfig = require('../config/vnpay');
+const { sortObject } = require('../util/pay');
 
 class PaymentController {
     // Tạo URL thanh toán
@@ -19,52 +10,69 @@ class PaymentController {
         try {
             const { amount, orderInfo, bankCode = 'NCB' } = req.body;
             
-            if (!amount || !orderInfo) {
+            // Kiểm tra orderInfo
+            if (!orderInfo || typeof orderInfo !== 'string') {
                 return res.status(400).json({
                     status: 'error',
-                    message: 'Missing required parameters'
+                    message: 'orderInfo is required and must be a string'
                 });
             }
 
+            // Chuyển đổi và làm sạch amount
+            const numericAmount = Math.round(Number(amount));
+            
+            if (isNaN(numericAmount) || numericAmount <= 0) {
+                return res.status(400).json({
+                    status: 'error',
+                    message: 'Invalid amount. Amount must be a positive number'
+                });
+            }
+
+            // Kiểm tra bankCode
+            if (bankCode && typeof bankCode !== 'string') {
+                return res.status(400).json({
+                    status: 'error',
+                    message: 'bankCode must be a string'
+                });
+            }
+
+            const { vnp_TmnCode, vnp_HashSecret, vnp_ReturnUrl, vnp_Url } = vnpayConfig;
+            const createDate = moment().format('YYYYMMDDHHmmss');
+            const orderId = moment().format('HHmmss');
+    
             const vnp_Params = {
                 vnp_Version: '2.1.0',
                 vnp_Command: 'pay',
-                vnp_TmnCode: vnpayConfig.vnp_TmnCode,
-                vnp_Amount: Math.round(amount * 100),
-                vnp_CurrCode: 'VND',
-                vnp_TxnRef: moment().format('YYYYMMDDHHmmss'),
-                vnp_OrderInfo: orderInfo,
-                vnp_OrderType: 'billpayment',
+                vnp_TmnCode,
                 vnp_Locale: 'vn',
-                vnp_ReturnUrl: vnpayConfig.vnp_ReturnUrl,
-                vnp_IpAddr: req.headers['x-forwarded-for'] || 
-                           req.connection.remoteAddress ||
-                           req.socket.remoteAddress,
-                vnp_CreateDate: moment().format('YYYYMMDDHHmmss'),
+                vnp_CurrCode: 'VND',
+                vnp_TxnRef: orderId,
+                vnp_OrderInfo: orderInfo.trim(),
+                vnp_OrderType: 'other',
+                vnp_Amount: numericAmount * 100,
+                vnp_ReturnUrl,
+                vnp_IpAddr: req.ip || '127.0.0.1',
+                vnp_CreateDate: createDate,
                 vnp_BankCode: bankCode
             };
-
+    
             // Sắp xếp các tham số theo thứ tự a-z
-            const sortedParams = this.sortObject(vnp_Params);
+            const sortedParams = sortObject(vnp_Params);
             
-            // Tạo chuỗi ký tự cần ký
-            const signData = querystring.stringify(sortedParams, { encode: false });
+            // Tạo chuỗi query parameters
+            const queryString = Object.entries(sortedParams)
+                .map(([key, value]) => `${key}=${value}`)
+                .join('&');
             
             // Tạo chữ ký
-            const hmac = crypto.createHmac('sha512', vnpayConfig.vnp_HashSecret)
-                              .update(signData)
-                              .digest('hex');
+            const hmac = crypto.createHmac("sha512", vnp_HashSecret);
+            const signed = hmac.update(new Buffer.from(queryString, 'utf-8')).digest("hex");
             
-            sortedParams['vnp_SecureHash'] = hmac;
-
             // Tạo URL thanh toán
-            const paymentUrl = `${vnpayConfig.vnp_Url}?${querystring.stringify(sortedParams, { encode: false })}`;
-
-            return res.status(200).json({
-                status: 'success',
-                paymentUrl: paymentUrl
-            });
-
+            const paymentUrl = `${vnp_Url}?${queryString}&vnp_SecureHash=${signed}`;
+            
+            return res.status(200).json({ status: 'success', paymentUrl });
+    
         } catch (error) {
             console.error('Create Payment Error:', error);
             return res.status(500).json({
@@ -73,6 +81,7 @@ class PaymentController {
             });
         }
     }
+    
 
     // Xử lý kết quả thanh toán từ VNPAY
     async vnpayReturn(req, res) {
@@ -85,15 +94,15 @@ class PaymentController {
             delete vnpParams['vnp_SecureHashType'];
 
             // Sắp xếp các tham số
-            const sortedParams = this.sortObject(vnpParams);
-            
+            const sortedParams = PaymentController.sortObject(vnpParams);
+
             // Tạo chuỗi ký tự cần kiểm tra
             const signData = querystring.stringify(sortedParams, { encode: false });
-            
+
             // Tạo chữ ký để kiểm tra
-            const hmac = crypto.createHmac('sha512', vnpayConfig.vnp_HashSecret)
-                              .update(signData)
-                              .digest('hex');
+            const hmac = crypto.createHmac('sha512', Buffer.from(vnpayConfig.vnp_HashSecret, 'utf-8'))
+                .update(Buffer.from(signData, 'utf-8'))
+                .digest('hex');
 
             // So sánh chữ ký
             if (secureHash === hmac) {
@@ -132,14 +141,6 @@ class PaymentController {
     }
 
     // Hàm sắp xếp object theo key
-    sortObject(obj) {
-        return Object.keys(obj)
-            .sort()
-            .reduce((result, key) => {
-                result[key] = obj[key];
-                return result;
-            }, {});
-    }
 }
 
-export default new PaymentController();
+module.exports = new PaymentController();
