@@ -5,6 +5,19 @@ import doctorController from "../controllers/doctorController"
 import patientController from "../controllers/patientController"
 import specialtyController from "../controllers/specialtyController";
 import clinicController from "../controllers/clinicController";
+import crypto from 'crypto';
+import querystring from 'querystring';
+import paymentController from "../controllers/paymentController";
+require('dotenv').config();
+
+const config = {
+    vnp_TmnCode: 'CD3C9M4R', // Mã TMN của bạn
+    vnp_HashSecret: 'IARSCI2PH2UMQ0FG4H9DE9CZIXC05H3Z', // Key bí mật
+    vnp_Url: 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html', // URL VNPAY
+    vnp_ReturnUrl: 'http://localhost:3000/payment-result', // URL nhận kết quả
+    vnp_IpAddr: '127.0.0.1',
+    vnp_Api:"https://sandbox.vnpayment.vn/merchant_webapi/api/transaction",
+};
 let router = express.Router();
 
 let initWebRoutes = (app) => {
@@ -49,6 +62,8 @@ let initWebRoutes = (app) => {
     router.get('/api/get-all-clinic', clinicController.getAllClinic);
     router.post('/api/create-new-clinic', clinicController.createClinic);
     router.get('/api/get-detail-clinic-by-id', clinicController.getDetailClinicById);
+    router.post('/api/create-payment', paymentController.createPaymentUrl);
+router.get('/api/vnpay-return', paymentController.vnpayReturn);
     return app.use("/", router);
 
 }
