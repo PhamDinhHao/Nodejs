@@ -5,12 +5,10 @@ const vnpayConfig = require('../config/vnpay');
 const { sortObject } = require('../util/pay');
 
 class PaymentController {
-    // Tạo URL thanh toán
     async createPaymentUrl(req, res) {
         try {
-            const { amount, orderInfo, bankCode = 'NCB' } = req.body;
-            
-            // Kiểm tra orderInfo
+            const { amount, orderInfo, bankCode, returnUrl } = req.body;
+            console.log(bankCode);
             if (!orderInfo || typeof orderInfo !== 'string') {
                 return res.status(400).json({
                     status: 'error',
@@ -18,7 +16,6 @@ class PaymentController {
                 });
             }
 
-            // Chuyển đổi và làm sạch amount
             const numericAmount = Math.round(Number(amount));
             
             if (isNaN(numericAmount) || numericAmount <= 0) {
@@ -28,7 +25,6 @@ class PaymentController {
                 });
             }
 
-            // Kiểm tra bankCode
             if (bankCode && typeof bankCode !== 'string') {
                 return res.status(400).json({
                     status: 'error',
@@ -36,7 +32,7 @@ class PaymentController {
                 });
             }
 
-            const { vnp_TmnCode, vnp_HashSecret, vnp_ReturnUrl, vnp_Url } = vnpayConfig;
+            const { vnp_TmnCode, vnp_HashSecret, vnp_Url } = vnpayConfig;
             const createDate = moment().format('YYYYMMDDHHmmss');
             const orderId = moment().format('HHmmss');
     
@@ -50,25 +46,21 @@ class PaymentController {
                 vnp_OrderInfo: orderInfo.trim(),
                 vnp_OrderType: 'other',
                 vnp_Amount: numericAmount * 100,
-                vnp_ReturnUrl,
+                vnp_ReturnUrl: returnUrl,
                 vnp_IpAddr: req.ip || '127.0.0.1',
                 vnp_CreateDate: createDate,
                 vnp_BankCode: bankCode
             };
     
-            // Sắp xếp các tham số theo thứ tự a-z
             const sortedParams = sortObject(vnp_Params);
             
-            // Tạo chuỗi query parameters
             const queryString = Object.entries(sortedParams)
                 .map(([key, value]) => `${key}=${value}`)
                 .join('&');
             
-            // Tạo chữ ký
             const hmac = crypto.createHmac("sha512", vnp_HashSecret);
             const signed = hmac.update(new Buffer.from(queryString, 'utf-8')).digest("hex");
             
-            // Tạo URL thanh toán
             const paymentUrl = `${vnp_Url}?${queryString}&vnp_SecureHash=${signed}`;
             
             return res.status(200).json({ status: 'success', paymentUrl });
@@ -83,64 +75,97 @@ class PaymentController {
     }
     
 
-    // Xử lý kết quả thanh toán từ VNPAY
     async vnpayReturn(req, res) {
         try {
             const vnpParams = req.query;
             const secureHash = vnpParams['vnp_SecureHash'];
-
-            // Xóa các tham số không cần thiết
             delete vnpParams['vnp_SecureHash'];
-            delete vnpParams['vnp_SecureHashType'];
 
-            // Sắp xếp các tham số
-            const sortedParams = PaymentController.sortObject(vnpParams);
+            const sortedParams = sortObject(vnpParams);
 
-            // Tạo chuỗi ký tự cần kiểm tra
-            const signData = querystring.stringify(sortedParams, { encode: false });
+            const queryString = Object.entries(sortedParams)
+                .map(([key, value]) => `${key}=${value}`)
+                .join('&');
 
-            // Tạo chữ ký để kiểm tra
-            const hmac = crypto.createHmac('sha512', Buffer.from(vnpayConfig.vnp_HashSecret, 'utf-8'))
-                .update(Buffer.from(signData, 'utf-8'))
+            const hmac = crypto.createHmac('sha512', vnpayConfig.vnp_HashSecret)
+                .update(Buffer.from(queryString, 'utf-8'))
                 .digest('hex');
 
-            // So sánh chữ ký
             if (secureHash === hmac) {
-                // Thanh toán thành công
                 const orderId = vnpParams['vnp_TxnRef'];
                 const rspCode = vnpParams['vnp_ResponseCode'];
+                
+                const responseData = {
+                    transactionId: vnpParams['vnp_TransactionNo'],
+                    orderId: orderId,
+                    amount: parseInt(vnpParams['vnp_Amount']) / 100,
+                    orderInfo: vnpParams['vnp_OrderInfo'],
+                    bankCode: vnpParams['vnp_BankCode'],
+                    bankTranNo: vnpParams['vnp_BankTranNo'],
+                    cardType: vnpParams['vnp_CardType'],
+                    payDate: vnpParams['vnp_PayDate'],
+                    transactionStatus: rspCode,
+                    responseCode: rspCode
+                };
 
-                // Kiểm tra mã phản hồi
                 if (rspCode === '00') {
-                    // Cập nhật trạng thái đơn hàng trong database
                     return res.status(200).json({
                         status: 'success',
-                        code: vnpParams['vnp_ResponseCode'],
-                        message: 'Payment successful'
+                        code: rspCode,
+                        message: 'Thanh toán thành công',
+                        data: responseData
                     });
                 } else {
+                    let errorMessage;
+                    switch (rspCode) {
+                        case '07':
+                            errorMessage = 'Trừ tiền thành công. Giao dịch bị nghi ngờ';
+                            break;
+                        case '09':
+                            errorMessage = 'Giao dịch không thành công do: Thẻ/Tài khoản không đủ số dư';
+                            break;
+                        case '10':
+                            errorMessage = 'Giao dịch không thành công do: Khách hàng xác thực thông tin không đúng';
+                            break;
+                        case '11':
+                            errorMessage = 'Giao dịch không thành công do: Đã hết hạn chờ thanh toán';
+                            break;
+                        case '12':
+                            errorMessage = 'Giao dịch không thành công do: Thẻ/Tài khoản bị khóa';
+                            break;
+                        case '24':
+                            errorMessage = 'Giao dịch không thành công do: Khách hàng hủy giao dịch';
+                            break;
+                        default:
+                            errorMessage = 'Giao dịch thất bại';
+                    }
+
                     return res.status(200).json({
                         status: 'error',
-                        code: vnpParams['vnp_ResponseCode'],
-                        message: 'Payment failed'
+                        code: rspCode,
+                        message: errorMessage,
+                        data: responseData
                     });
                 }
             } else {
                 return res.status(400).json({
                     status: 'error',
-                    message: 'Invalid signature'
+                    code: '97',
+                    message: 'Chữ ký không hợp lệ',
+                    data: null
                 });
             }
         } catch (error) {
             console.error('VNPay Return Error:', error);
             return res.status(500).json({
                 status: 'error',
-                message: 'Internal server error'
+                code: '99',
+                message: 'Lỗi server',
+                data: null
             });
         }
     }
 
-    // Hàm sắp xếp object theo key
 }
 
 module.exports = new PaymentController();

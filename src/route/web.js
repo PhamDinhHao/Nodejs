@@ -8,6 +8,7 @@ import clinicController from "../controllers/clinicController";
 import crypto from 'crypto';
 import querystring from 'querystring';
 import paymentController from "../controllers/paymentController";
+import chatController from "../controllers/chatController";
 require('dotenv').config();
 
 const config = {
@@ -63,7 +64,8 @@ let initWebRoutes = (app) => {
     router.post('/api/create-new-clinic', clinicController.createClinic);
     router.get('/api/get-detail-clinic-by-id', clinicController.getDetailClinicById);
     router.post('/api/create-payment', paymentController.createPaymentUrl);
-router.get('/api/vnpay-return', paymentController.vnpayReturn);
+    router.get('/api/vnpay-return', paymentController.vnpayReturn);
+    router.post('/api/chat', chatController.postChat);
     return app.use("/", router);
 
 }

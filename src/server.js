@@ -5,7 +5,8 @@ import initWebRoutes from "./route/web";
 import connectDB from "./config/connectDB";
 import cors from 'cors';
 require('dotenv').config();
-
+global.fetch = require('node-fetch');
+global.Headers = fetch.Headers;
 let app = express();
 // app.use(cors({ credentials: true, origin: true }));
 //add headers
