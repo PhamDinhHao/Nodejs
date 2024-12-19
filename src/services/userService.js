@@ -249,6 +249,102 @@ let getAllCodeService = (typeInput) => {
         }
     })
 }
+let faceRecognition = (data) => {
+    
+    return new Promise(async (resolve, reject) => {
+        try {
+            // Tìm user dựa trên id
+            let user = await db.User.findOne({
+                where: { id: data.id },
+                raw: false
+            });
+
+            if (!user) {
+                resolve({
+                    errCode: 1,
+                    errMessage: 'Không tìm thấy người dùng'
+                });
+                return;
+            }
+
+            // Lưu dữ liệu khuôn mặt
+            user.faceId = data.faceImage;
+            await user.save();
+
+            resolve({
+                errCode: 0,
+                errMessage: 'Đăng ký FaceID thành công'
+            });
+
+        } catch (error) {
+            reject(error);
+        }
+    });
+}
+let getFaceId = (data) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            // Kiểm tra dữ liệu đầu vào
+            if (!data || !data.firstName || !data.lastName || !data.roleId) {
+                resolve({
+                    errCode: 1,
+                    errMessage: 'Thiếu thông tin đầu vào'
+                });
+                return;
+            }
+
+            // Tìm user dựa trên firstName, lastName và roleId
+            let user = await db.User.findOne({
+                where: {
+                    firstName: data.firstName,
+                    lastName: data.lastName,
+                    roleId: data.roleId
+                },
+                raw: false
+            });
+
+            if (!user) {
+                resolve({
+                    errCode: 1,
+                    errMessage: 'Không tìm thấy người dùng'
+                });
+                return;
+            }
+
+            // Kiểm tra xem user có FaceID được kích hoạt không
+            if (!user.faceId) {
+                resolve({
+                    errCode: 2,
+                    errMessage: 'FaceID chưa được kích hoạt cho người dùng này'
+                });
+                return;
+            }
+
+            // TODO: Thêm logic so sánh faceImage với dữ liệu khuôn mặt đã lưu
+            // Giả sử có hàm compareFaces để so sánh
+            // const isMatch = await compareFaces(data.faceImage, user.faceImage);
+
+            // Tạm thời return thành công
+            resolve({
+                errCode: 0,
+                errMessage: 'Xác thực thành công',
+                user: {
+                    id: user.id,
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    roleId: user.roleId
+                }
+            });
+
+        } catch (error) {
+            console.log('Error:', error);
+            resolve({
+                errCode: -1,
+                errMessage: 'Lỗi từ server'
+            });
+        }
+    });
+}
 module.exports = {
     handleUserLogin: handleUserLogin,
     getAllUsers: getAllUsers,
@@ -256,4 +352,6 @@ module.exports = {
     deleteUser: deleteUser,
     updateUserData: updateUserData,
     getAllCodeService: getAllCodeService,
+    faceRecognition: faceRecognition,
+    getFaceId: getFaceId
 }
