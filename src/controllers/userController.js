@@ -1,4 +1,4 @@
-import userService from "../services/userService";
+import { userService } from "../services/userService";
 const multer = require('multer');
 const upload = multer().single('faceImage');
 
@@ -85,10 +85,7 @@ let faceRecognition = async (req, res) => {
                 faceImage: req.file
             };
             
-            console.log("Form fields:", req.body);
-            console.log("File:", req.file);
-            
-            let message = await userService.faceRecognition(data);
+            let message = await userService.registerFaceId(data.id, data.faceImage);
             return res.status(200).json(message);
         });
     } catch (error) {
@@ -100,9 +97,30 @@ let faceRecognition = async (req, res) => {
     }
 }
 let getFaceId = async (req, res) => {
-    let data = req.body;
-    let message = await userService.getFaceId(data);
-    return res.status(200).json(message);
+    try {
+        upload(req, res, async function(err) {
+            if (err) {
+                return res.status(400).json({
+                    errCode: 1,
+                    message: 'Error uploading file'
+                });
+            }
+            
+            const data = {
+                ...req.body,
+                faceImage: req.file
+            };
+            
+            let message = await userService.authenticateWithFace(data);
+            return res.status(200).json(message);
+        });
+    } catch (error) {
+        console.error('Face recognition error:', error);
+        return res.status(500).json({
+            errCode: -1,
+            message: 'Server error'
+        });
+    }
 }
 module.exports = {
     handleLogin: handleLogin,
