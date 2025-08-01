@@ -347,15 +347,15 @@ class UserService {
     createNewUser = (data) => {
         return new Promise(async (resolve, reject) => {
             try {
-                let check = await checkUserEmail(data.email);
+                let check = await this.checkUserEmail(data.email);
                 if (check === true) {
                     resolve({
                         errCode: 1,
-                        errMessage: 'Your email is already in used, plz try another emnail'
+                        errMessage: 'Your email is already in used, plz try another email'
                     });
                 }
                 else {
-                    let hashPasswordFromBrypt = await hashUserPassword(data.password);
+                    let hashPasswordFromBrypt = await this.hashUserPassword(data.password);
                     await db.User.create({
                         email: data.email,
                         password: hashPasswordFromBrypt,
@@ -367,14 +367,12 @@ class UserService {
                         roleId: data.roleId,
                         positionId: data.positionId,
                         image: data.avatar
-    
                     })
                     resolve({
                         errCode: 0,
-                        errMessage: 'oke'
+                        errMessage: 'ok'
                     });
                 }
-    
             } catch (error) {
                 reject(error)
             }
@@ -563,7 +561,7 @@ class UserService {
                 );
                 
                 console.log(`Similarity with user ${user.id}:`, similarity);
-                if (similarity > 0.85) return user;
+                if (similarity > 0.8) return user;
             } catch (error) {
                 console.error(`Error comparing with user ${user.id}:`, error);
             }

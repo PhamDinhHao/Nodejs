@@ -30,7 +30,6 @@ module.exports = (sequelize, DataTypes) => {
     image: DataTypes.STRING,
     roleId: DataTypes.STRING,
     positionId: DataTypes.STRING,
-    faceId: DataTypes.BLOB('long'),
 
   }, {
     sequelize,
