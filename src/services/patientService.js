@@ -9,7 +9,6 @@ let buildUrlEmail = (doctorId, token) => {
 
 let postBookAppointment = (data) => {
     return new Promise(async (resolve, reject) => {
-        
         try {
             if (!data.email || !data.doctorId || !data.date || !data.timeType || !data.fullName || !data.selectedGender || !data.address ) {
                 resolve({
@@ -18,12 +17,17 @@ let postBookAppointment = (data) => {
                 })
             }
             else{
+                let doctor = await db.User.findOne({
+                    where: { id: data.doctorId },
+                    raw: false,
+                })
+
                 let token = uuidv4()
                 await emailService.sendSimpleEmail({
                     receiverEmail: data.email,
                     patientName: data.fullName,
-                    time: data.timeString,
-                    doctorName: data.doctorName,
+                    time: data.timeBooking,
+                    doctorName: doctor.firstName + ' ' + doctor.lastName,
                     language: data.language,
                     redirectLink: buildUrlEmail(data.doctorId, token)
                 })

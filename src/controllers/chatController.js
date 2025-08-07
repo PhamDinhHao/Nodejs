@@ -71,7 +71,6 @@ let postChat = async (req, res) => {
           },
         ]
       });
-      console.log(allDoctors)
       doctorContext = allDoctors.map(doctor => `
         Bác sĩ: ${doctor.User?.firstName} ${doctor.User?.lastName}
         Chuyên khoa: ${doctor.specialtyData?.valueVi || 'Chưa cập nhật'}

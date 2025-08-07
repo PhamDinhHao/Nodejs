@@ -1,4 +1,4 @@
-const db = require("../models");
+import db from "../models";
 
 let createSpecialty = (data) => {
     return new Promise(async (resolve, reject) => {
@@ -103,7 +103,7 @@ let getDetailSpecialtyById = (specialtyId, location) => {
         }
     })
 }
-module.exports = {
+export default {
     createSpecialty: createSpecialty,
     getAllSpecialty: getAllSpecialty,
     getDetailSpecialtyById: getDetailSpecialtyById

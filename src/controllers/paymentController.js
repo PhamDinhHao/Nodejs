@@ -8,7 +8,6 @@ class PaymentController {
     async createPaymentUrl(req, res) {
         try {
             const { amount, orderInfo, bankCode, returnUrl } = req.body;
-            console.log(bankCode);
             if (!orderInfo || typeof orderInfo !== 'string') {
                 return res.status(400).json({
                     status: 'error',
